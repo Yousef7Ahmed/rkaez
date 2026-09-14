@@ -1,0 +1,20 @@
+{
+  "name": "rakaez-mongodb-cms",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js",
+    "seed": "node server/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "helmet": "^8.1.0",
+    "mongoose": "^8.18.0",
+    "multer": "^2.0.2",
+    "cloudinary": "^2.7.0"
+  }
+}

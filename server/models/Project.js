@@ -1,0 +1,2 @@
+const mongoose=require('mongoose');
+module.exports=mongoose.model('Project',new mongoose.Schema({section:{type:String,enum:['rakah_a','rakah_bz'],required:true},title:{type:String,required:true},subtitle:String,description:String,status:String,year:Number,coverImage:String,images:[{path:String,sortOrder:Number,publicId:String}],video:String,landArea:String,builtArea:String,rooms:String,order:{type:Number,default:0}},{timestamps:true}));
