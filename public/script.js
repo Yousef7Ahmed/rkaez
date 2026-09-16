@@ -1203,36 +1203,165 @@ document.querySelectorAll(".themer button").forEach((b) => {
       .replace(/'/g, "&#039;");
   }
 })();
-
 /* ============================================================
    RAKAEZ CMS - MongoDB dynamic projects
    ============================================================ */
+
 window.GALLERIES = GALLERIES;
-(function loadCmsProjects(){
-  const render = async () => {
+
+/* HTML escape مستقل عن نظام الـ PDF */
+function escapeCMSHTML(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+(function loadCmsProjects() {
+  async function renderCMSProjects() {
     const sections = {
-      rakah_a: document.querySelector('#rakah-a-projects .gallery'),
-      rakah_bz: document.querySelector('#rakah-bz-projects .gallery')
+      rakah_a: document.querySelector("#rakah-a-projects .gallery"),
+      rakah_bz: document.querySelector("#rakah-bz-projects .gallery"),
     };
-    if (!sections.rakah_a && !sections.rakah_bz) return;
+
+    if (!sections.rakah_a && !sections.rakah_bz) {
+      console.warn("CMS projects containers were not found.");
+      return;
+    }
+
     try {
-      const res = await fetch('/api/projects');
-      if (!res.ok) return;
-      const projects = await res.json();
-      Object.values(sections).forEach(el => { if (el) el.innerHTML = ''; });
-      projects.forEach((p, index) => {
-        const key = 'cms-' + p._id;
-        const imgs = (p.images || []).slice().sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)).map(x => x.path);
-        if (!imgs.length) return;
-        GALLERIES[key] = {title:p.title || '', sub:p.subtitle || '', images:imgs};
-        const btn = document.createElement('button');
-        btn.type='button'; btn.className='tile tile--half reveal';
-        btn.dataset.gallery=key; btn.dataset.title=p.title||''; btn.dataset.sub=p.subtitle||'';
-        btn.innerHTML = `<img class="tile__art" src="${escapeHTML(imgs[0])}" alt="${escapeHTML(p.title||'مشروع')}" loading="lazy" decoding="async"><span class="tile__shade"></span><span class="tile__meta"><strong>${escapeHTML(p.title||'مشروع')}</strong><small>${escapeHTML(p.subtitle||'')}</small></span>`;
-        (sections[p.section] || sections.rakah_bz).appendChild(btn);
+      const res = await fetch("/api/projects", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
       });
-      document.querySelectorAll('.reveal').forEach(el=>el.classList.add('is-visible'));
-    } catch(e) { console.warn('CMS projects unavailable', e); }
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
+
+      if (!res.ok) {
+        throw new Error("Projects API returned " + res.status);
+      }
+
+      const projects = await res.json();
+
+      console.log("CMS projects loaded:", projects);
+
+      /* تنظيف الأقسام قبل إضافة مشاريع MongoDB */
+      Object.values(sections).forEach((el) => {
+        if (el) el.innerHTML = "";
+      });
+
+      projects.forEach((project) => {
+        /*
+         * ترتيب الصور:
+         * images → حسب sortOrder
+         * ولو مفيش images نستخدم coverImage
+         */
+        const images = (project.images || [])
+          .slice()
+          .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+          .map((image) => image.path)
+          .filter(Boolean);
+
+        if (!images.length && project.coverImage) {
+          images.push(project.coverImage);
+        }
+
+        /*
+         * لو المشروع مفيهوش أي صورة، ما نلغيش المشروع.
+         * نستخدم رسم الكارت الموجود بدل الصورة.
+         */
+        const galleryKey = "cms-" + project._id;
+
+        GALLERIES[galleryKey] = {
+          title: project.title || "مشروع",
+          sub: project.subtitle || project.description || "",
+          images,
+        };
+
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "tile tile--half reveal";
+
+        button.dataset.gallery = galleryKey;
+        button.dataset.title = project.title || "مشروع";
+        button.dataset.sub = project.subtitle || project.description || "";
+
+        if (images.length) {
+          button.innerHTML = `
+            <img
+              class="tile__art"
+              src="${escapeCMSHTML(images[0])}"
+              alt="${escapeCMSHTML(project.title || "مشروع")}"
+              loading="lazy"
+              decoding="async"
+            >
+            <span class="tile__shade"></span>
+
+            <span class="tile__meta">
+              <em>${escapeCMSHTML(project.section || "")}</em>
+              <h3>${escapeCMSHTML(project.title || "مشروع")}</h3>
+              <p>${escapeCMSHTML(
+                project.subtitle || project.description || "",
+              )}</p>
+            </span>
+          `;
+        } else {
+          button.innerHTML = `
+            <span class="tile__shade"></span>
+
+            <span class="tile__meta">
+              <em>${escapeCMSHTML(project.section || "")}</em>
+              <h3>${escapeCMSHTML(project.title || "مشروع")}</h3>
+              <p>${escapeCMSHTML(
+                project.subtitle || project.description || "",
+              )}</p>
+            </span>
+          `;
+        }
+
+        /*
+         * تحديد القسم الصحيح
+         */
+        let target = sections[project.section];
+
+        if (!target) {
+          target = sections.rakah_bz || sections.rakah_a;
+        }
+
+        if (!target) return;
+
+        target.appendChild(button);
+
+        /*
+         * مهم جداً:
+         * mountGalleries() الأصلي اشتغل قبل تحميل MongoDB.
+         * لذلك لازم نربط الكارت الجديد بالـ Lightbox هنا.
+         */
+        mountGalleries(button);
+
+        /*
+         * إضافة reveal observer للكارت الجديد
+         */
+        if (typeof io !== "undefined") {
+          io.observe(button);
+        }
+      });
+
+      console.log(`CMS: ${projects.length} project(s) rendered successfully.`);
+    } catch (error) {
+      console.error("CMS projects unavailable:", error);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderCMSProjects, {
+      once: true,
+    });
+  } else {
+    renderCMSProjects();
+  }
 })();
