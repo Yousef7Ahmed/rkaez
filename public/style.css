@@ -1840,47 +1840,46 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
     border-color: var(--primary-color);
 }
 /* ============================================================
-   LIGHTBOX
+   PROJECT VIEWER - CMS PROJECTS
    ============================================================ */
 
-.lightbox {
+.project-viewer {
     position: fixed;
     inset: 0;
     z-index: 9999;
-
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
-
     padding: 24px;
-
-    background: rgba(5, 8, 10, 0.92);
+    background: rgba(5, 8, 10, 0.94);
 
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
 
     transition:
         opacity 0.25s ease,
         visibility 0.25s ease;
 }
 
-.lightbox.is-open {
-    display: flex;
+.project-viewer.is-open {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
 }
 
-.lightbox__backdrop {
+.project-viewer__backdrop {
     position: absolute;
     inset: 0;
+    cursor: pointer;
 }
 
-.lightbox__dialog {
+.project-viewer__dialog {
     position: relative;
     z-index: 2;
 
-    width: min(1100px, 100%);
-    max-height: 92vh;
+    width: min(1180px, 100%);
+    max-height: 94vh;
 
     display: flex;
     flex-direction: column;
@@ -1888,43 +1887,60 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
     background: #11181b;
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 20px;
-
     overflow: hidden;
 
     box-shadow:
-        0 30px 100px rgba(0,0,0,0.5);
+        0 30px 100px rgba(0,0,0,0.55);
 }
 
-.lightbox__header {
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.project-viewer__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
 
     gap: 20px;
-
     padding: 18px 22px;
 
     border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-.lightbox__heading h2 {
+.project-viewer__heading {
+    min-width: 0;
+}
+
+.project-viewer__section {
+    display: block;
+    margin-bottom: 4px;
+
+    color: var(--gold, #c9a063);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.project-viewer__heading h2 {
     margin: 0;
 
     color: #fff;
-
     font-family: "El Messiri", sans-serif;
-    font-size: 20px;
+    font-size: 21px;
+    line-height: 1.5;
 }
 
-.lightbox__heading p {
+.project-viewer__heading p {
     margin: 5px 0 0;
 
     color: rgba(255,255,255,0.6);
-
     font-size: 13px;
+    line-height: 1.7;
 }
 
-.lightbox__close {
+.project-viewer__close {
     width: 42px;
     height: 42px;
 
@@ -1937,7 +1953,6 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
     border-radius: 50%;
 
     background: rgba(255,255,255,0.06);
-
     color: #fff;
 
     cursor: pointer;
@@ -1947,12 +1962,25 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
         transform 0.2s ease;
 }
 
-.lightbox__close:hover {
+.project-viewer__close:hover {
     background: rgba(255,255,255,0.12);
     transform: rotate(90deg);
 }
 
-.lightbox__content {
+/* ============================================================
+   BODY
+   ============================================================ */
+
+.project-viewer__body {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* ============================================================
+   IMAGE GALLERY
+   ============================================================ */
+
+.project-viewer__gallery {
     position: relative;
 
     min-height: 420px;
@@ -1961,38 +1989,85 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
     align-items: center;
     justify-content: center;
 
-    padding: 25px 80px;
+    padding: 28px 82px;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255,255,255,0.035),
+            transparent 65%
+        );
 }
 
-.lightbox__frame {
+.project-viewer__image-wrap {
+    position: relative;
+
     width: 100%;
-    height: min(65vh, 650px);
+    height: min(62vh, 650px);
 
     display: flex;
     align-items: center;
     justify-content: center;
+
+    overflow: hidden;
 }
 
-.lightbox__frame img {
+.project-viewer__image {
     display: block;
-
-    max-width: 100%;
-    max-height: 100%;
 
     width: auto;
     height: auto;
+
+    max-width: 100%;
+    max-height: 100%;
 
     object-fit: contain;
 
     border-radius: 10px;
 
     box-shadow:
-        0 20px 60px rgba(0,0,0,0.35);
+        0 20px 60px rgba(0,0,0,0.4);
+
+    user-select: none;
+    -webkit-user-drag: none;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
 }
 
-.lightbox__nav {
+.project-viewer__image.is-loading {
+    opacity: 0;
+}
+
+.project-viewer__loading {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%);
+
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+
+    white-space: nowrap;
+
+    pointer-events: none;
+}
+
+.project-viewer__loading.is-hidden {
+    display: none;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+.project-viewer__nav {
     position: absolute;
     top: 50%;
+
     transform: translateY(-50%);
 
     width: 48px;
@@ -2005,46 +2080,56 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
     border-radius: 50%;
 
     background: rgba(255,255,255,0.07);
-
     color: #fff;
 
     cursor: pointer;
-
     z-index: 3;
 
     transition:
         background 0.2s ease,
-        transform 0.2s ease;
+        transform 0.2s ease,
+        opacity 0.2s ease;
 }
 
-.lightbox__nav:hover {
+.project-viewer__nav:hover {
     background: rgba(255,255,255,0.14);
 }
 
-.lightbox__nav:disabled {
-    opacity: 0.3;
+.project-viewer__nav:active {
+    transform: translateY(-50%) scale(0.94);
+}
+
+.project-viewer__nav:disabled {
+    opacity: 0.25;
     cursor: default;
 }
 
-.lightbox__nav--prev {
+.project-viewer__nav--prev {
     right: 20px;
 }
 
-.lightbox__nav--next {
+.project-viewer__nav--next {
     left: 20px;
 }
 
-.lightbox__count {
+/* ============================================================
+   COUNTER
+   ============================================================ */
+
+.project-viewer__counter {
     text-align: center;
 
     padding: 8px;
 
     color: rgba(255,255,255,0.65);
-
     font-size: 13px;
 }
 
-.lightbox__thumbs {
+/* ============================================================
+   THUMBNAILS
+   ============================================================ */
+
+.project-viewer__thumbs {
     display: flex;
     gap: 8px;
 
@@ -2053,15 +2138,17 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
     overflow-x: auto;
 
     border-top: 1px solid rgba(255,255,255,0.06);
+
+    scrollbar-width: thin;
 }
 
-.lightbox__thumbs:empty {
+.project-viewer__thumbs:empty {
     display: none;
 }
 
-.lightbox__thumbs button {
-    width: 70px;
-    height: 52px;
+.project-viewer__thumbs button {
+    width: 72px;
+    height: 54px;
 
     flex: 0 0 auto;
 
@@ -2076,80 +2163,193 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 
     cursor: pointer;
 
-    opacity: 0.55;
+    opacity: 0.5;
 
     transition:
         opacity 0.2s ease,
-        border-color 0.2s ease;
+        border-color 0.2s ease,
+        transform 0.2s ease;
 }
 
-.lightbox__thumbs button:hover {
+.project-viewer__thumbs button:hover {
     opacity: 1;
+    transform: translateY(-2px);
 }
 
-.lightbox__thumbs button[aria-current="true"] {
+.project-viewer__thumbs button[aria-current="true"] {
     opacity: 1;
     border-color: var(--gold, #c9a063);
 }
 
-.lightbox__thumbs img {
+.project-viewer__thumbs img {
     width: 100%;
     height: 100%;
+
+    display: block;
 
     object-fit: cover;
 }
 
+/* ============================================================
+   PROJECT DETAILS
+   ============================================================ */
 
-/* Mobile */
+.project-viewer__details {
+    padding: 20px 22px 24px;
+
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.project-viewer__description > span {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: var(--gold, #c9a063);
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.project-viewer__description p {
+    margin: 0;
+
+    color: rgba(255,255,255,0.7);
+
+    font-size: 13px;
+    line-height: 1.9;
+}
+
+.project-viewer__specs {
+    display: grid;
+
+    grid-template-columns:
+        repeat(5, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-top: 18px;
+}
+
+.project-viewer__spec {
+    padding: 13px 14px;
+
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+
+    background: rgba(255,255,255,0.025);
+}
+
+.project-viewer__spec span {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: rgba(255,255,255,0.45);
+
+    font-size: 10px;
+}
+
+.project-viewer__spec strong {
+    display: block;
+
+    color: #fff;
+
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* Hide empty information boxes */
+
+.project-viewer__spec.is-empty {
+    display: none;
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
 
 @media (max-width: 700px) {
 
-    .lightbox {
+    .project-viewer {
         padding: 10px;
     }
 
-    .lightbox__dialog {
+    .project-viewer__dialog {
         max-height: 96vh;
         border-radius: 14px;
     }
 
-    .lightbox__header {
+    .project-viewer__header {
         padding: 14px;
     }
 
-    .lightbox__heading h2 {
+    .project-viewer__section {
+        font-size: 9px;
+    }
+
+    .project-viewer__heading h2 {
         font-size: 16px;
     }
 
-    .lightbox__heading p {
+    .project-viewer__heading p {
         font-size: 11px;
     }
 
-    .lightbox__content {
-        min-height: 320px;
-        padding: 20px 55px;
-    }
-
-    .lightbox__frame {
-        height: 55vh;
-    }
-
-    .lightbox__nav {
+    .project-viewer__close {
         width: 38px;
         height: 38px;
     }
 
-    .lightbox__nav--prev {
+    .project-viewer__gallery {
+        min-height: 320px;
+        padding: 20px 55px;
+    }
+
+    .project-viewer__image-wrap {
+        height: 55vh;
+    }
+
+    .project-viewer__nav {
+        width: 38px;
+        height: 38px;
+    }
+
+    .project-viewer__nav--prev {
         right: 10px;
     }
 
-    .lightbox__nav--next {
+    .project-viewer__nav--next {
         left: 10px;
     }
 
-    .lightbox__thumbs button {
+    .project-viewer__thumbs {
+        padding: 10px 12px 14px;
+    }
+
+    .project-viewer__thumbs button {
         width: 58px;
         height: 44px;
+    }
+
+    .project-viewer__details {
+        padding: 16px;
+    }
+
+    .project-viewer__specs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 420px) {
+
+    .project-viewer__gallery {
+        padding-left: 48px;
+        padding-right: 48px;
+    }
+
+    .project-viewer__specs {
+        grid-template-columns: 1fr;
     }
 }
 /* =========================================================
@@ -2634,8 +2834,9 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 }
 
 .specifications-grid {
+    width: 86vw;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
 }
 

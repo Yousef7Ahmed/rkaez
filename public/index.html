@@ -1806,46 +1806,45 @@
 </a>
 
 
-
 <!-- ============================================================
-     LIGHTBOX / GALLERY
+     PROJECT VIEWER - NEW CMS
      ============================================================ -->
 
 <div
-    class="lightbox"
-    id="lb"
+    class="project-viewer"
+    id="projectViewer"
     aria-hidden="true"
     role="dialog"
     aria-modal="true"
-    aria-labelledby="lbTitle"
+    aria-labelledby="projectViewerTitle"
 >
 
+    <div class="project-viewer__backdrop" data-project-viewer-close></div>
 
-    <div class="lightbox__backdrop"></div>
+    <div class="project-viewer__dialog">
 
+        <!-- HEADER -->
+        <div class="project-viewer__header">
 
-    <div class="lightbox__dialog">
+            <div class="project-viewer__heading">
 
+                <span
+                    class="project-viewer__section"
+                    id="projectViewerSection"
+                ></span>
 
-        <div class="lightbox__header">
+                <h2 id="projectViewerTitle"></h2>
 
-
-            <div class="lightbox__heading">
-
-                <h2 id="lbTitle"></h2>
-
-                <p id="lbSub"></p>
+                <p id="projectViewerSubtitle"></p>
 
             </div>
 
-
             <button
                 type="button"
-                class="lightbox__close"
-                id="lbClose"
-                aria-label="إغلاق معرض الصور"
+                class="project-viewer__close"
+                id="projectViewerClose"
+                aria-label="إغلاق المشروع"
             >
-
                 <svg
                     width="22"
                     height="22"
@@ -1854,96 +1853,163 @@
                     stroke="currentColor"
                     stroke-width="1.7"
                 >
-
-                    <path d="M6 6l12 12"/>
-
-                    <path d="M18 6L6 18"/>
-
+                    <path d="M6 6l12 12"></path>
+                    <path d="M18 6L6 18"></path>
                 </svg>
-
             </button>
-
 
         </div>
 
 
+        <!-- PROJECT CONTENT -->
+        <div class="project-viewer__body">
 
-        <div class="lightbox__content">
+            <!-- IMAGE AREA -->
+            <div class="project-viewer__gallery">
 
-
-            <button
-                type="button"
-                class="lightbox__nav lightbox__nav--prev"
-                id="lbPrev"
-                aria-label="الصورة السابقة"
-            >
-
-                <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.7"
+                <button
+                    type="button"
+                    class="project-viewer__nav project-viewer__nav--prev"
+                    id="projectViewerPrev"
+                    aria-label="الصورة السابقة"
                 >
+                    <svg
+                        width="25"
+                        height="25"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                    >
+                        <path d="M15 18l-6-6 6-6"></path>
+                    </svg>
+                </button>
 
-                    <path d="M15 18l-6-6 6-6"/>
 
-                </svg>
+                <div
+                    class="project-viewer__image-wrap"
+                    id="projectViewerImageWrap"
+                >
+                    <div
+                        class="project-viewer__loading"
+                        id="projectViewerLoading"
+                    >
+                        جاري تحميل الصورة...
+                    </div>
 
-            </button>
+                    <img
+                        id="projectViewerImage"
+                        class="project-viewer__image"
+                        src=""
+                        alt=""
+                    >
+                </div>
 
 
+                <button
+                    type="button"
+                    class="project-viewer__nav project-viewer__nav--next"
+                    id="projectViewerNext"
+                    aria-label="الصورة التالية"
+                >
+                    <svg
+                        width="25"
+                        height="25"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                    >
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </button>
+
+            </div>
+
+
+            <!-- COUNTER -->
             <div
-                class="lightbox__frame"
-                id="lbFrame"
+                class="project-viewer__counter"
+                id="projectViewerCounter"
+            >
+                1 / 1
+            </div>
+
+
+            <!-- THUMBNAILS -->
+            <div
+                class="project-viewer__thumbs"
+                id="projectViewerThumbs"
+                aria-label="صور المشروع"
             ></div>
 
 
-            <button
-                type="button"
-                class="lightbox__nav lightbox__nav--next"
-                id="lbNext"
-                aria-label="الصورة التالية"
+            <!-- PROJECT DETAILS -->
+            <div
+                class="project-viewer__details"
+                id="projectViewerDetails"
             >
 
-                <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.7"
-                >
+                <div class="project-viewer__description">
+                    <span>تفاصيل المشروع</span>
 
-                    <path d="M9 18l6-6-6-6"/>
+                    <p id="projectViewerDescription"></p>
+                </div>
 
-                </svg>
 
-            </button>
+                <div class="project-viewer__specs">
 
+                    <div
+                        class="project-viewer__spec"
+                        id="projectViewerStatusBox"
+                    >
+                        <span>الحالة</span>
+                        <strong id="projectViewerStatus"></strong>
+                    </div>
+
+
+                    <div
+                        class="project-viewer__spec"
+                        id="projectViewerYearBox"
+                    >
+                        <span>السنة</span>
+                        <strong id="projectViewerYear"></strong>
+                    </div>
+
+
+                    <div
+                        class="project-viewer__spec"
+                        id="projectViewerLandBox"
+                    >
+                        <span>مساحة الأرض</span>
+                        <strong id="projectViewerLand"></strong>
+                    </div>
+
+
+                    <div
+                        class="project-viewer__spec"
+                        id="projectViewerBuiltBox"
+                    >
+                        <span>مسطح البناء</span>
+                        <strong id="projectViewerBuilt"></strong>
+                    </div>
+
+
+                    <div
+                        class="project-viewer__spec"
+                        id="projectViewerRoomsBox"
+                    >
+                        <span>الغرف</span>
+                        <strong id="projectViewerRooms"></strong>
+                    </div>
+
+                </div>
+
+            </div>
 
         </div>
-
-
-
-        <div
-            class="lightbox__count"
-            id="lbCount"
-        >
-            1 / 1
-        </div>
-
-
-        <div
-            class="lightbox__thumbs"
-            id="lbThumbs"
-            aria-label="صور المعرض"
-        ></div>
-
 
     </div>
-
 
 </div>
 

@@ -1146,12 +1146,13 @@ document.querySelectorAll(".themer button").forEach((b) => {
 })();
 
 /* ============================================================
-   RAKAEZ CMS - MongoDB dynamic projects
+   RAKAEZ CMS - MongoDB PROJECT VIEWER
    ============================================================ */
 
-window.GALLERIES = GALLERIES;
+/* ------------------------------------------------------------
+   HTML escape
+   ------------------------------------------------------------ */
 
-/* HTML escape مستقل عن نظام الـ PDF */
 function escapeCMSHTML(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -1161,149 +1162,785 @@ function escapeCMSHTML(value) {
     .replace(/'/g, "&#039;");
 }
 
-(function loadCmsProjects() {
-  async function renderCMSProjects() {
-    const sections = {
-      rakah_a: document.querySelector("#rakah-a-projects .gallery"),
-      rakah_bz: document.querySelector("#rakah-bz-projects .gallery"),
+/* ------------------------------------------------------------
+   Project Viewer Elements
+   ------------------------------------------------------------ */
+
+const projectViewer = document.getElementById("projectViewer");
+const projectViewerClose = document.getElementById("projectViewerClose");
+
+const projectViewerTitle = document.getElementById("projectViewerTitle");
+
+const projectViewerSubtitle = document.getElementById("projectViewerSubtitle");
+
+const projectViewerSection = document.getElementById("projectViewerSection");
+
+const projectViewerImage = document.getElementById("projectViewerImage");
+
+const projectViewerImageWrap = document.getElementById(
+  "projectViewerImageWrap",
+);
+
+const projectViewerLoading = document.getElementById("projectViewerLoading");
+
+const projectViewerPrev = document.getElementById("projectViewerPrev");
+
+const projectViewerNext = document.getElementById("projectViewerNext");
+
+const projectViewerCounter = document.getElementById("projectViewerCounter");
+
+const projectViewerThumbs = document.getElementById("projectViewerThumbs");
+
+const projectViewerDescription = document.getElementById(
+  "projectViewerDescription",
+);
+
+const projectViewerDetails = document.getElementById("projectViewerDetails");
+
+const projectViewerStatus = document.getElementById("projectViewerStatus");
+
+const projectViewerYear = document.getElementById("projectViewerYear");
+
+const projectViewerLand = document.getElementById("projectViewerLand");
+
+const projectViewerBuilt = document.getElementById("projectViewerBuilt");
+
+const projectViewerRooms = document.getElementById("projectViewerRooms");
+
+const projectViewerStatusBox = document.getElementById(
+  "projectViewerStatusBox",
+);
+
+const projectViewerYearBox = document.getElementById("projectViewerYearBox");
+
+const projectViewerLandBox = document.getElementById("projectViewerLandBox");
+
+const projectViewerBuiltBox = document.getElementById("projectViewerBuiltBox");
+
+const projectViewerRoomsBox = document.getElementById("projectViewerRoomsBox");
+
+/* ------------------------------------------------------------
+   State
+   ------------------------------------------------------------ */
+
+let currentProject = null;
+let currentProjectImages = [];
+let currentProjectImageIndex = 0;
+let projectViewerLastFocus = null;
+let projectViewerTouchX = null;
+
+/* ------------------------------------------------------------
+   Section Label
+   ------------------------------------------------------------ */
+
+function getProjectSectionLabel(project) {
+  if (project.section === "rakah_a") {
+    return "Al Rakah A";
+  }
+
+  if (project.section === "rakah_bz") {
+    return "Al Rakah B & Z";
+  }
+
+  return project.section || "Al Rakah";
+}
+
+/* ------------------------------------------------------------
+   Project Images
+   ------------------------------------------------------------ */
+
+function getProjectImages(project) {
+  const images = (Array.isArray(project.images) ? project.images : [])
+    .slice()
+    .sort((a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0))
+    .map((image) => image?.path)
+    .filter(Boolean);
+
+  /*
+   * لو مفيش صور داخل images
+   * استخدم coverImage
+   */
+
+  if (!images.length && project.coverImage) {
+    images.push(project.coverImage);
+  }
+
+  return images;
+}
+
+/* ------------------------------------------------------------
+   Empty Spec Helper
+   ------------------------------------------------------------ */
+
+function setProjectSpec(box, valueElement, value) {
+  if (!box || !valueElement) return;
+
+  const cleanValue = String(value ?? "").trim();
+
+  if (!cleanValue) {
+    box.classList.add("is-empty");
+    valueElement.textContent = "";
+    return;
+  }
+
+  box.classList.remove("is-empty");
+  valueElement.textContent = cleanValue;
+}
+
+/* ------------------------------------------------------------
+   Render Project Details
+   ------------------------------------------------------------ */
+
+function renderProjectDetails(project) {
+  const title = project.title || project.name || "مشروع";
+
+  const subtitle = project.subtitle || "";
+
+  const description = project.description || "";
+
+  projectViewerTitle.textContent = title;
+  projectViewerSubtitle.textContent = subtitle;
+  projectViewerSection.textContent = getProjectSectionLabel(project);
+
+  projectViewerDescription.textContent = description;
+
+  setProjectSpec(projectViewerStatusBox, projectViewerStatus, project.status);
+
+  setProjectSpec(projectViewerYearBox, projectViewerYear, project.year);
+
+  setProjectSpec(projectViewerLandBox, projectViewerLand, project.landArea);
+
+  setProjectSpec(projectViewerBuiltBox, projectViewerBuilt, project.builtArea);
+
+  setProjectSpec(projectViewerRoomsBox, projectViewerRooms, project.rooms);
+
+  /*
+   * إخفاء قسم التفاصيل بالكامل لو مفيش
+   * description ولا specs
+   */
+
+  const hasDescription = Boolean(description.trim());
+
+  const hasSpecs = Boolean(
+    project.status ||
+    project.year ||
+    project.landArea ||
+    project.builtArea ||
+    project.rooms,
+  );
+
+  if (projectViewerDetails) {
+    projectViewerDetails.style.display =
+      hasDescription || hasSpecs ? "" : "none";
+  }
+}
+
+/* ------------------------------------------------------------
+   Render Thumbnails
+   ------------------------------------------------------------ */
+
+function renderProjectThumbnails() {
+  if (!projectViewerThumbs) return;
+
+  projectViewerThumbs.innerHTML = "";
+
+  if (currentProjectImages.length <= 1) {
+    return;
+  }
+
+  currentProjectImages.forEach((src, index) => {
+    const button = document.createElement("button");
+
+    button.type = "button";
+
+    button.setAttribute("aria-label", "عرض الصورة " + (index + 1));
+
+    button.setAttribute(
+      "aria-current",
+      String(index === currentProjectImageIndex),
+    );
+
+    const img = new Image();
+
+    img.src = src;
+    img.alt = "";
+
+    img.loading = "lazy";
+    img.decoding = "async";
+
+    img.onerror = () => {
+      button.remove();
     };
 
-    if (!sections.rakah_a && !sections.rakah_bz) {
-      console.warn("CMS projects containers were not found.");
+    button.appendChild(img);
+
+    button.addEventListener("click", () => {
+      showProjectImage(index);
+    });
+
+    projectViewerThumbs.appendChild(button);
+  });
+}
+
+/* ------------------------------------------------------------
+   Show Project Image
+   ------------------------------------------------------------ */
+
+function showProjectImage(index) {
+  if (!currentProjectImages.length) {
+    return;
+  }
+
+  currentProjectImageIndex =
+    (index + currentProjectImages.length) % currentProjectImages.length;
+
+  const src = currentProjectImages[currentProjectImageIndex];
+
+  if (!projectViewerImage) {
+    return;
+  }
+
+  /*
+   * Loading state
+   */
+
+  projectViewerImage.classList.add("is-loading");
+
+  if (projectViewerLoading) {
+    projectViewerLoading.classList.remove("is-hidden");
+  }
+
+  /*
+   * تحميل الصورة فعليًا
+   */
+
+  const preload = new Image();
+
+  preload.onload = () => {
+    projectViewerImage.src = src;
+
+    projectViewerImage.alt =
+      (currentProject?.title || currentProject?.name || "مشروع") +
+      " — صورة " +
+      (currentProjectImageIndex + 1);
+
+    projectViewerImage.classList.remove("is-loading");
+
+    if (projectViewerLoading) {
+      projectViewerLoading.classList.add("is-hidden");
+    }
+  };
+
+  preload.onerror = () => {
+    projectViewerImage.removeAttribute("src");
+
+    projectViewerImage.classList.remove("is-loading");
+
+    if (projectViewerLoading) {
+      projectViewerLoading.textContent = "تعذر تحميل الصورة";
+
+      projectViewerLoading.classList.remove("is-hidden");
+    }
+  };
+
+  preload.src = src;
+
+  /*
+   * Counter
+   */
+
+  if (projectViewerCounter) {
+    projectViewerCounter.textContent = `${currentProjectImageIndex + 1} / ${currentProjectImages.length}`;
+
+    projectViewerCounter.style.display =
+      currentProjectImages.length > 1 ? "" : "none";
+  }
+
+  /*
+   * Navigation buttons
+   */
+
+  const single = currentProjectImages.length < 2;
+
+  if (projectViewerPrev) {
+    projectViewerPrev.disabled = single;
+  }
+
+  if (projectViewerNext) {
+    projectViewerNext.disabled = single;
+  }
+
+  /*
+   * Active thumbnail
+   */
+
+  if (projectViewerThumbs) {
+    projectViewerThumbs
+      .querySelectorAll("button")
+      .forEach((button, buttonIndex) => {
+        button.setAttribute(
+          "aria-current",
+          String(buttonIndex === currentProjectImageIndex),
+        );
+      });
+
+    const activeThumb = projectViewerThumbs.querySelector(
+      `button:nth-child(${currentProjectImageIndex + 1})`,
+    );
+
+    if (activeThumb) {
+      activeThumb.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }
+}
+
+/* ------------------------------------------------------------
+   Open Project Viewer
+   ------------------------------------------------------------ */
+
+function openProjectViewer(project, sourceElement) {
+  if (!projectViewer) {
+    console.error("Project Viewer element was not found.");
+    return;
+  }
+
+  currentProject = project;
+
+  currentProjectImages = getProjectImages(project);
+
+  currentProjectImageIndex = 0;
+
+  projectViewerLastFocus = sourceElement || document.activeElement;
+
+  /*
+   * Details
+   */
+
+  renderProjectDetails(project);
+
+  /*
+   * Images
+   */
+
+  renderProjectThumbnails();
+
+  if (currentProjectImages.length) {
+    showProjectImage(0);
+  } else {
+    /*
+     * مفيش صورة نهائيًا
+     */
+
+    if (projectViewerImage) {
+      projectViewerImage.removeAttribute("src");
+
+      projectViewerImage.alt = "";
+    }
+
+    if (projectViewerLoading) {
+      projectViewerLoading.textContent = "لا توجد صور لهذا المشروع";
+
+      projectViewerLoading.classList.remove("is-hidden");
+    }
+
+    if (projectViewerCounter) {
+      projectViewerCounter.style.display = "none";
+    }
+
+    if (projectViewerPrev) {
+      projectViewerPrev.disabled = true;
+    }
+
+    if (projectViewerNext) {
+      projectViewerNext.disabled = true;
+    }
+  }
+
+  /*
+   * Open
+   */
+
+  projectViewer.classList.add("is-open");
+
+  projectViewer.setAttribute("aria-hidden", "false");
+
+  document.body.style.overflow = "hidden";
+
+  /*
+   * Focus
+   */
+
+  requestAnimationFrame(() => {
+    if (projectViewerClose) {
+      projectViewerClose.focus();
+    }
+  });
+}
+
+/* ------------------------------------------------------------
+   Close Project Viewer
+   ------------------------------------------------------------ */
+
+function closeProjectViewer() {
+  if (!projectViewer) {
+    return;
+  }
+
+  projectViewer.classList.remove("is-open");
+
+  projectViewer.setAttribute("aria-hidden", "true");
+
+  document.body.style.overflow = "";
+
+  if (
+    projectViewerLastFocus &&
+    typeof projectViewerLastFocus.focus === "function"
+  ) {
+    projectViewerLastFocus.focus();
+  }
+
+  currentProject = null;
+  currentProjectImages = [];
+  currentProjectImageIndex = 0;
+}
+
+/* ------------------------------------------------------------
+   Viewer Controls
+   ------------------------------------------------------------ */
+
+if (projectViewerPrev) {
+  projectViewerPrev.addEventListener("click", () => {
+    showProjectImage(currentProjectImageIndex - 1);
+  });
+}
+
+if (projectViewerNext) {
+  projectViewerNext.addEventListener("click", () => {
+    showProjectImage(currentProjectImageIndex + 1);
+  });
+}
+
+if (projectViewerClose) {
+  projectViewerClose.addEventListener("click", closeProjectViewer);
+}
+
+/*
+ * الضغط على الخلفية يقفل العارض
+ */
+
+if (projectViewer) {
+  projectViewer.addEventListener("click", (event) => {
+    if (event.target.closest("[data-project-viewer-close]")) {
+      closeProjectViewer();
+    }
+  });
+}
+
+/* ------------------------------------------------------------
+   Keyboard
+   ------------------------------------------------------------ */
+
+document.addEventListener("keydown", (event) => {
+  /*
+   * Escape
+   */
+
+  if (event.key === "Escape") {
+    if (projectViewer && projectViewer.classList.contains("is-open")) {
+      closeProjectViewer();
       return;
     }
 
-    try {
-      const res = await fetch("/api/projects", {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      });
+    closeMenu();
+    return;
+  }
 
-      if (!res.ok) {
-        throw new Error("Projects API returned " + res.status);
+  /*
+   * تجاهل الأسهم لو العارض مقفول
+   */
+
+  if (
+    !projectViewer ||
+    !projectViewer.classList.contains("is-open") ||
+    currentProjectImages.length < 2
+  ) {
+    return;
+  }
+
+  /*
+   * RTL:
+   * ArrowLeft = Next
+   * ArrowRight = Previous
+   */
+
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+
+    showProjectImage(currentProjectImageIndex + 1);
+  }
+
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+
+    showProjectImage(currentProjectImageIndex - 1);
+  }
+});
+
+/* ------------------------------------------------------------
+   Touch Swipe
+   ------------------------------------------------------------ */
+
+if (projectViewer) {
+  projectViewer.addEventListener(
+    "touchstart",
+    (event) => {
+      if (!projectViewer.classList.contains("is-open")) {
+        return;
       }
 
-      const projects = await res.json();
+      projectViewerTouchX = event.changedTouches[0].clientX;
+    },
+    { passive: true },
+  );
 
-      console.log("CMS projects loaded:", projects);
+  projectViewer.addEventListener(
+    "touchend",
+    (event) => {
+      if (projectViewerTouchX === null || currentProjectImages.length < 2) {
+        return;
+      }
 
-      /* تنظيف الأقسام قبل إضافة مشاريع MongoDB */
-      Object.values(sections).forEach((el) => {
-        if (el) el.innerHTML = "";
-      });
+      const currentX = event.changedTouches[0].clientX;
 
-      projects.forEach((project) => {
+      const distance = currentX - projectViewerTouchX;
+
+      if (Math.abs(distance) > 50) {
         /*
-         * ترتيب الصور:
-         * images → حسب sortOrder
-         * ولو مفيش images نستخدم coverImage
+         * Swipe left = next
+         * Swipe right = previous
          */
-        const images = (project.images || [])
-          .slice()
-          .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
-          .map((image) => image.path)
-          .filter(Boolean);
 
-        if (!images.length && project.coverImage) {
-          images.push(project.coverImage);
-        }
+        showProjectImage(currentProjectImageIndex + (distance < 0 ? 1 : -1));
+      }
 
-        /*
-         * لو المشروع مفيهوش أي صورة، ما نلغيش المشروع.
-         * نستخدم رسم الكارت الموجود بدل الصورة.
-         */
-        const galleryKey = "cms-" + project._id;
+      projectViewerTouchX = null;
+    },
+    { passive: true },
+  );
+}
 
-        GALLERIES[galleryKey] = {
-          title: project.title || "مشروع",
-          sub: project.subtitle || project.description || "",
-          images,
-        };
+/* ------------------------------------------------------------
+   Project Card
+   ------------------------------------------------------------ */
 
-        const button = document.createElement("button");
+function createProjectCard(project) {
+  const button = document.createElement("button");
 
-        button.type = "button";
-        button.className = "tile tile--half reveal";
+  button.type = "button";
 
-        button.dataset.gallery = galleryKey;
-        button.dataset.title = project.title || "مشروع";
-        button.dataset.sub = project.subtitle || project.description || "";
+  button.className = "tile tile--half reveal";
 
-        if (images.length) {
-          button.innerHTML = `
-            <img
-              class="tile__art"
-              src="${escapeCMSHTML(images[0])}"
-              alt="${escapeCMSHTML(project.title || "مشروع")}"
-              loading="lazy"
-              decoding="async"
-            >
-            <span class="tile__shade"></span>
+  const title = project.title || project.name || "مشروع";
 
-            <span class="tile__meta">
-              <em>${escapeCMSHTML(project.section || "")}</em>
-              <h3>${escapeCMSHTML(project.title || "مشروع")}</h3>
-              <p>${escapeCMSHTML(
-                project.subtitle || project.description || "",
-              )}</p>
-            </span>
-          `;
-        } else {
-          button.innerHTML = `
-            <span class="tile__shade"></span>
+  const subtitle = project.subtitle || "";
 
-            <span class="tile__meta">
-              <em>${escapeCMSHTML(project.section || "")}</em>
-              <h3>${escapeCMSHTML(project.title || "مشروع")}</h3>
-              <p>${escapeCMSHTML(
-                project.subtitle || project.description || "",
-              )}</p>
-            </span>
-          `;
-        }
+  const sectionLabel = getProjectSectionLabel(project);
 
-        /*
-         * تحديد القسم الصحيح
-         */
-        let target = sections[project.section];
+  const images = getProjectImages(project);
 
-        if (!target) {
-          target = sections.rakah_bz || sections.rakah_a;
-        }
+  /*
+   * Card with image
+   */
 
-        if (!target) return;
+  if (images.length) {
+    button.innerHTML = `
+      <img
+        class="tile__art"
+        src="${escapeCMSHTML(images[0])}"
+        alt="${escapeCMSHTML(title)}"
+        loading="lazy"
+        decoding="async"
+      >
 
-        target.appendChild(button);
+      <span class="tile__shade"></span>
 
-        /*
-         * مهم جداً:
-         * mountGalleries() الأصلي اشتغل قبل تحميل MongoDB.
-         * لذلك لازم نربط الكارت الجديد بالـ Lightbox هنا.
-         */
-        mountGalleries(button);
+      <span class="tile__meta">
+        <em>
+          ${escapeCMSHTML(sectionLabel)}
+        </em>
 
-        /*
-         * إضافة reveal observer للكارت الجديد
-         */
-        if (typeof io !== "undefined") {
-          io.observe(button);
-        }
-      });
+        <h3>
+          ${escapeCMSHTML(title)}
+        </h3>
 
-      console.log(`CMS: ${projects.length} project(s) rendered successfully.`);
-    } catch (error) {
-      console.error("CMS projects unavailable:", error);
+        <p>
+          ${escapeCMSHTML(subtitle)}
+        </p>
+
+        <p>
+          للمزيد من الصور
+        </p>
+      </span>
+    `;
+
+    /*
+     * لو صورة الغلاف فشلت
+     */
+
+    const cover = button.querySelector(".tile__art");
+
+    if (cover) {
+      cover.addEventListener(
+        "error",
+        () => {
+          cover.remove();
+
+          button.classList.add("project-no-image");
+        },
+        { once: true },
+      );
     }
+  } else {
+    /*
+     * Card بدون صور
+     */
+
+    button.innerHTML = `
+      <span class="tile__shade"></span>
+
+      <span class="tile__meta">
+        <em>
+          ${escapeCMSHTML(sectionLabel)}
+        </em>
+
+        <h3>
+          ${escapeCMSHTML(title)}
+        </h3>
+
+        <p>
+          ${escapeCMSHTML(subtitle)}
+        </p>
+      </span>
+    `;
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", renderCMSProjects, {
-      once: true,
-    });
-  } else {
-    renderCMSProjects();
+  /*
+   * Open new Project Viewer
+   */
+
+  button.addEventListener("click", () => {
+    openProjectViewer(project, button);
+  });
+
+  /*
+   * Reveal animation
+   */
+
+  if (typeof io !== "undefined") {
+    io.observe(button);
   }
-})();
+
+  return button;
+}
+
+/* ------------------------------------------------------------
+   Load Projects From MongoDB
+   ------------------------------------------------------------ */
+
+async function loadCmsProjects() {
+  const sections = {
+    rakah_a: document.querySelector("#rakah-a-projects .gallery"),
+
+    rakah_bz: document.querySelector("#rakah-bz-projects .gallery"),
+  };
+
+  if (!sections.rakah_a && !sections.rakah_bz) {
+    console.warn("CMS projects containers were not found.");
+
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/projects", {
+      method: "GET",
+
+      headers: {
+        Accept: "application/json",
+      },
+
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error("Projects API returned HTTP " + response.status);
+    }
+
+    const projects = await response.json();
+
+    if (!Array.isArray(projects)) {
+      throw new Error("Projects API did not return an array.");
+    }
+
+    console.log("CMS projects loaded:", projects);
+
+    /*
+     * إزالة الـ cards القديمة
+     */
+
+    Object.values(sections).forEach((section) => {
+      if (section) {
+        section.innerHTML = "";
+      }
+    });
+
+    /*
+     * ترتيب المشاريع
+     */
+
+    projects.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
+
+    /*
+     * إنشاء Cards
+     */
+
+    projects.forEach((project) => {
+      let target = sections[project.section];
+
+      /*
+       * fallback احتياطي
+       */
+
+      if (!target) {
+        target = sections.rakah_a || sections.rakah_bz;
+      }
+
+      if (!target) {
+        return;
+      }
+
+      const card = createProjectCard(project);
+
+      target.appendChild(card);
+    });
+
+    console.log(`CMS: ${projects.length} project(s) rendered successfully.`);
+  } catch (error) {
+    console.error("CMS projects unavailable:", error);
+  }
+}
+
+/* ------------------------------------------------------------
+   Start CMS Projects
+   ------------------------------------------------------------ */
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", loadCmsProjects, {
+    once: true,
+  });
+} else {
+  loadCmsProjects();
+}
