@@ -2834,7 +2834,7 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 }
 
 .specifications-grid {
-    width: 86vw;
+    width: 70vw;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
