@@ -803,10 +803,17 @@ document.querySelectorAll(".themer button").forEach((b) => {
    PDF DOCUMENT SYSTEM
    ============================================================ */
 
-(async function initPDFSystem() {
-  const cards = document.querySelectorAll(".specialty-card");
+/* ============================================================
+   PDF DOCUMENT SYSTEM — CMS / API VERSION
+   ============================================================ */
 
-  if (!cards.length) return;
+(async function initPDFSystem() {
+  const filesGrid = document.getElementById("filesGrid");
+
+  if (!filesGrid) {
+    console.warn("PDF system: #filesGrid was not found.");
+    return;
+  }
 
   /* ------------------------------------------------------------
      Load PDF.js
@@ -821,477 +828,323 @@ document.querySelectorAll(".themer button").forEach((b) => {
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
   } catch (error) {
-    console.error("Failed to load PDF.js:", error);
+    console.error("PDF system: Failed to load PDF.js:", error);
 
     return;
   }
 
   /* ------------------------------------------------------------
-     Elements
-     ------------------------------------------------------------ */
-
-  const modal = document.getElementById("pdfModal");
-  const backdrop = document.getElementById("pdfModalBackdrop");
-  const closeBtn = document.getElementById("pdfModalClose");
-
-  const modalTitle = document.getElementById("pdfModalTitle");
-  const modalSubtitle = document.getElementById("pdfModalSubtitle");
-
-  const documentsView = document.getElementById("pdfDocumentsView");
-  const pdfList = document.getElementById("pdfList");
-  const pdfDocumentsCount = document.getElementById("pdfDocumentsCount");
-
-  const viewer = document.getElementById("pdfViewer");
-
-  const viewerBack = document.getElementById("pdfViewerBack");
-  const viewerTitle = document.getElementById("pdfViewerTitle");
-  const viewerExternal = document.getElementById("pdfViewerExternal");
-
-  const canvas = document.getElementById("pdfCanvas");
-  const canvasContext = canvas.getContext("2d");
-
-  const canvasWrap = document.getElementById("pdfCanvasWrap");
-
-  const loading = document.getElementById("pdfLoading");
-
-  const prevBtn = document.getElementById("pdfPrev");
-
-  const nextBtn = document.getElementById("pdfNext");
-
-  const pagePrev = document.getElementById("pdfPagePrev");
-
-  const pageNext = document.getElementById("pdfPageNext");
-
-  const currentPage = document.getElementById("pdfCurrentPage");
-
-  const totalPages = document.getElementById("pdfTotalPages");
-
-  const zoomIn = document.getElementById("pdfZoomIn");
-
-  const zoomOut = document.getElementById("pdfZoomOut");
-
-  const zoomValue = document.getElementById("pdfZoomValue");
-
-  /* ------------------------------------------------------------
      State
      ------------------------------------------------------------ */
 
-  let currentPDF = null;
-  let currentPageNumber = 1;
-  let currentZoom = 1;
-
-  const pageCache = new Map();
+  const renderedCards = new WeakSet();
+  const loadingCards = new WeakSet();
 
   /* ------------------------------------------------------------
-     Parse PDFs
+     Load PDFs from CMS API
      ------------------------------------------------------------ */
 
-  function getCardPDFs(card) {
+  async function loadCMSPDFs() {
     try {
-      const data = card.dataset.pdfs;
+      const response = await fetch("/api/pdfs", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
 
-      if (!data) return [];
+      if (!response.ok) {
+        throw new Error("PDF API returned HTTP " + response.status);
+      }
 
-      return JSON.parse(data);
+      const data = await response.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error("PDF API did not return an array.");
+      }
+
+      console.log("CMS PDFs loaded:", data);
+
+      return data
+
+        .map((pdf) => ({
+          id: pdf._id,
+
+          name: pdf.title || "مستند PDF",
+
+          file: pdf.filePath,
+
+          category: pdf.category || "other",
+
+          order: Number(pdf.order || 0),
+        }))
+
+        .filter((pdf) => pdf.file)
+
+        .sort((a, b) => {
+          return a.order - b.order;
+        });
     } catch (error) {
-      console.error("Invalid PDF data:", error);
+      console.error("PDF system: Failed to load CMS PDFs:", error);
 
       return [];
     }
   }
 
   /* ------------------------------------------------------------
-     Open modal
+     Create PDF Card
      ------------------------------------------------------------ */
 
-  async function openSpecialty(card) {
-    const title = card.dataset.title || "المستندات";
+  function createPDFCard(pdf) {
+    const card = document.createElement("a");
 
-    const pdfs = getCardPDFs(card);
+    card.className = "file-card";
 
-    modalTitle.textContent = title;
+    card.href = pdf.file;
 
-    modalSubtitle.textContent = "الملفات والمستندات الخاصة بهذا البند";
+    card.target = "_blank";
 
-    pdfDocumentsCount.textContent = pdfs.length;
+    card.rel = "noopener";
 
-    pdfList.innerHTML = "";
+    card.dataset.pdfId = pdf.id || "";
 
-    documentsView.hidden = false;
-    viewer.hidden = true;
+    card.dataset.category = pdf.category || "other";
 
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
+    card.innerHTML = `
 
-    document.body.style.overflow = "hidden";
+      <div class="pdf-preview">
 
-    if (!pdfs.length) {
-      pdfList.innerHTML = `
-        <div class="pdf-empty">
-          لا توجد مستندات مضافة لهذا البند حالياً.
+        <div class="pdf-loading">
+          جاري تحميل الملف...
         </div>
-      `;
+
+        <canvas></canvas>
+
+      </div>
+
+
+      <div class="file-name">
+        ${escapeHTML(pdf.name)}
+      </div>
+
+    `;
+
+    return card;
+  }
+
+  /* ------------------------------------------------------------
+     Escape HTML
+     ------------------------------------------------------------ */
+
+  function escapeHTML(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+
+      .replace(/</g, "&lt;")
+
+      .replace(/>/g, "&gt;")
+
+      .replace(/"/g, "&quot;")
+
+      .replace(/'/g, "&#039;");
+  }
+
+  /* ------------------------------------------------------------
+     Render first PDF page
+     ------------------------------------------------------------ */
+
+  async function renderPDFPreview(card) {
+    if (renderedCards.has(card) || loadingCards.has(card)) {
+      return;
+    }
+
+    const pdfUrl = card.getAttribute("href");
+
+    const canvas = card.querySelector("canvas");
+
+    const preview = card.querySelector(".pdf-preview");
+
+    const loading = card.querySelector(".pdf-loading");
+
+    if (!pdfUrl || !canvas || !preview) {
+      return;
+    }
+
+    loadingCards.add(card);
+
+    try {
+      console.log("Rendering PDF preview:", pdfUrl);
+
+      const pdf = await pdfjsLib.getDocument({
+        url: pdfUrl,
+      }).promise;
+
+      const page = await pdf.getPage(1);
+
+      const containerWidth = preview.clientWidth;
+
+      if (!containerWidth) {
+        throw new Error("PDF preview has zero width.");
+      }
+
+      const originalViewport = page.getViewport({
+        scale: 1,
+      });
+
+      const scale = containerWidth / originalViewport.width;
+
+      const viewport = page.getViewport({
+        scale: scale,
+      });
+
+      canvas.width = Math.floor(viewport.width);
+
+      canvas.height = Math.floor(viewport.height);
+
+      canvas.style.width = viewport.width + "px";
+
+      canvas.style.height = viewport.height + "px";
+
+      const context = canvas.getContext("2d", {
+        alpha: false,
+      });
+
+      await page.render({
+        canvasContext: context,
+
+        viewport: viewport,
+      }).promise;
+
+      if (loading) {
+        loading.style.display = "none";
+      }
+
+      renderedCards.add(card);
+
+      /*
+       * Release PDF resources
+       */
+
+      pdf.cleanup();
+
+      pdf.destroy();
+    } catch (error) {
+      console.error("PDF Preview Error:", pdfUrl, error);
+
+      if (loading) {
+        loading.style.display = "none";
+      }
+
+      if (preview && !preview.querySelector(".pdf-error")) {
+        const errorBox = document.createElement("div");
+
+        errorBox.className = "pdf-error";
+
+        errorBox.innerHTML = `
+
+          <strong>
+            تعذر عرض المعاينة
+          </strong>
+
+          <span>
+            اضغط لفتح ملف PDF
+          </span>
+
+        `;
+
+        preview.appendChild(errorBox);
+      }
+    } finally {
+      loadingCards.delete(card);
+    }
+  }
+
+  /* ------------------------------------------------------------
+     Lazy Loading
+     ------------------------------------------------------------ */
+
+  function setupPDFLazyLoading() {
+    const cards = filesGrid.querySelectorAll(".file-card");
+
+    if (!cards.length) {
+      console.log("PDF system: No PDF cards found.");
 
       return;
     }
 
-    pdfs.forEach((pdf, index) => {
-      const item = document.createElement("button");
-
-      item.type = "button";
-      item.className = "pdf-item";
-
-      item.innerHTML = `
-        <span class="pdf-item__icon">
-          <svg width="24" height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5">
-
-            <path d="M6 3h8l4 4v14H6z"/>
-            <path d="M14 3v5h5"/>
-            <path d="M9 13h6"/>
-            <path d="M9 17h5"/>
-
-          </svg>
-        </span>
-
-        <span class="pdf-item__info">
-
-          <span class="pdf-item__name">
-            ${escapeHTML(pdf.name || `ملف PDF ${index + 1}`)}
-          </span>
-
-          <span class="pdf-item__meta">
-            <span>PDF</span>
-            <span>•</span>
-            <span class="pdf-pages-loading">
-              جاري حساب الصفحات...
-            </span>
-          </span>
-
-        </span>
-
-        <span class="pdf-item__arrow">
-          <svg width="17" height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6">
-
-            <path d="M5 12h14"/>
-            <path d="m13 6 6 6-6 6"/>
-
-          </svg>
-        </span>
-      `;
-
-      const pagesElement = item.querySelector(".pdf-pages-loading");
-
-      item.addEventListener("click", () => {
-        openPDF(pdf, title);
+    if (!("IntersectionObserver" in window)) {
+      cards.forEach((card, index) => {
+        if (index < 2) {
+          renderPDFPreview(card);
+        }
       });
 
-      pdfList.appendChild(item);
+      return;
+    }
 
-      /* Calculate pages */
+    const observer = new IntersectionObserver(
+      (entries, observerInstance) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
 
-      getPDFPageCount(pdf.file)
-        .then((count) => {
-          pagesElement.textContent = `${count} ${count === 1 ? "صفحة" : "صفحات"}`;
-        })
-        .catch(() => {
-          pagesElement.textContent = "ملف PDF";
+          const card = entry.target;
+
+          renderPDFPreview(card);
+
+          observerInstance.unobserve(card);
         });
+      },
+
+      {
+        root: null,
+
+        rootMargin: "600px 0px",
+
+        threshold: 0.01,
+      },
+    );
+
+    cards.forEach((card) => {
+      observer.observe(card);
     });
   }
 
   /* ------------------------------------------------------------
-     Get PDF page count
+     Load CMS PDFs
      ------------------------------------------------------------ */
 
-  async function getPDFPageCount(url) {
-    if (pageCache.has(url)) {
-      return pageCache.get(url).numPages;
-    }
-
-    const loadingTask = pdfjsLib.getDocument(url);
-
-    const pdf = await loadingTask.promise;
-
-    pageCache.set(url, pdf);
-
-    return pdf.numPages;
-  }
+  const cmsPDFs = await loadCMSPDFs();
 
   /* ------------------------------------------------------------
-     Open PDF viewer
+     Replace Static PDFs with CMS PDFs
      ------------------------------------------------------------ */
 
-  async function openPDF(pdfData, specialtyTitle) {
-    currentPDF = pdfData;
+  if (cmsPDFs.length) {
+    filesGrid.innerHTML = "";
 
-    currentPageNumber = 1;
-    currentZoom = 1;
+    cmsPDFs.forEach((pdf) => {
+      const card = createPDFCard(pdf);
 
-    documentsView.hidden = true;
-    viewer.hidden = false;
-
-    viewerTitle.textContent = pdfData.name || "PDF";
-
-    viewerExternal.href = pdfData.file;
-
-    zoomValue.textContent = "100%";
-
-    loading.hidden = false;
-
-    try {
-      let pdf;
-
-      if (pageCache.has(pdfData.file)) {
-        pdf = pageCache.get(pdfData.file);
-      } else {
-        const loadingTask = pdfjsLib.getDocument(pdfData.file);
-
-        pdf = await loadingTask.promise;
-
-        pageCache.set(pdfData.file, pdf);
-      }
-
-      currentPDF.document = pdf;
-
-      totalPages.textContent = pdf.numPages;
-
-      await renderPage();
-    } catch (error) {
-      console.error("PDF loading error:", error);
-
-      loading.hidden = true;
-
-      canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-
-      const message = document.createElement("div");
-
-      message.style.cssText = `
-        padding:40px;
-        text-align:center;
-        color:var(--muted);
-        font-size:14px;
-      `;
-
-      message.textContent =
-        "تعذر فتح ملف PDF. تأكد من وجود الملف والمسار الصحيح.";
-
-      canvasWrap.appendChild(message);
-    }
-  }
-
-  /* ------------------------------------------------------------
-     Render current page
-     ------------------------------------------------------------ */
-
-  async function renderPage() {
-    if (!currentPDF || !currentPDF.document) return;
-
-    loading.hidden = false;
-
-    const pdf = currentPDF.document;
-
-    const page = await pdf.getPage(currentPageNumber);
-
-    const baseViewport = page.getViewport({
-      scale: 1,
+      filesGrid.appendChild(card);
     });
 
-    const stage = document.querySelector(".pdf-viewer__stage");
-
-    const availableWidth = Math.max(250, stage.clientWidth - 150);
-
-    const availableHeight = Math.max(300, stage.clientHeight - 50);
-
-    const widthScale = availableWidth / baseViewport.width;
-
-    const heightScale = availableHeight / baseViewport.height;
-
-    const fitScale = Math.min(widthScale, heightScale);
-
-    const scale = Math.max(0.4, fitScale * currentZoom);
-
-    const viewport = page.getViewport({
-      scale,
-    });
-
-    canvas.width = Math.floor(viewport.width);
-
-    canvas.height = Math.floor(viewport.height);
-
-    canvas.style.width = `${viewport.width}px`;
-
-    canvas.style.height = `${viewport.height}px`;
-
-    await page.render({
-      canvasContext,
-      viewport,
-    }).promise;
-
-    currentPage.textContent = currentPageNumber;
-
-    updatePageButtons();
-
-    loading.hidden = true;
+    console.log(`PDF system: ${cmsPDFs.length} CMS PDF(s) rendered.`);
+  } else {
+    console.warn(
+      "PDF system: No CMS PDFs returned. Keeping existing HTML PDFs.",
+    );
   }
 
   /* ------------------------------------------------------------
-     Navigation
+     Start Lazy Loading
      ------------------------------------------------------------ */
 
-  async function goToPage(page) {
-    if (!currentPDF?.document) return;
-
-    const total = currentPDF.document.numPages;
-
-    if (page < 1 || page > total) return;
-
-    currentPageNumber = page;
-
-    await renderPage();
-  }
-
-  function updatePageButtons() {
-    if (!currentPDF?.document) return;
-
-    const total = currentPDF.document.numPages;
-
-    const isFirst = currentPageNumber <= 1;
-
-    const isLast = currentPageNumber >= total;
-
-    prevBtn.disabled = isFirst;
-
-    pagePrev.disabled = isFirst;
-
-    nextBtn.disabled = isLast;
-
-    pageNext.disabled = isLast;
-  }
-
-  /* ------------------------------------------------------------
-     Zoom
-     ------------------------------------------------------------ */
-
-  async function changeZoom(amount) {
-    currentZoom = Math.max(0.5, Math.min(2.5, currentZoom + amount));
-
-    zoomValue.textContent = `${Math.round(currentZoom * 100)}%`;
-
-    await renderPage();
-  }
-
-  /* ------------------------------------------------------------
-     Close viewer
-     ------------------------------------------------------------ */
-
-  function closePDFViewer() {
-    currentPDF = null;
-
-    documentsView.hidden = false;
-    viewer.hidden = true;
-  }
-
-  /* ------------------------------------------------------------
-     Close modal
-     ------------------------------------------------------------ */
-
-  function closeModal() {
-    modal.classList.remove("is-open");
-
-    modal.setAttribute("aria-hidden", "true");
-
-    document.body.style.overflow = "";
-
-    currentPDF = null;
-  }
-
-  /* ------------------------------------------------------------
-     Events
-     ------------------------------------------------------------ */
-
-  cards.forEach((card) => {
-    card.addEventListener("click", () => openSpecialty(card));
-  });
-
-  closeBtn.addEventListener("click", closeModal);
-
-  backdrop.addEventListener("click", closeModal);
-
-  viewerBack.addEventListener("click", closePDFViewer);
-
-  prevBtn.addEventListener("click", () => goToPage(currentPageNumber - 1));
-
-  nextBtn.addEventListener("click", () => goToPage(currentPageNumber + 1));
-
-  pagePrev.addEventListener("click", () => goToPage(currentPageNumber - 1));
-
-  pageNext.addEventListener("click", () => goToPage(currentPageNumber + 1));
-
-  zoomIn.addEventListener("click", () => changeZoom(0.2));
-
-  zoomOut.addEventListener("click", () => changeZoom(-0.2));
-
-  /* ------------------------------------------------------------
-     Keyboard controls
-     ------------------------------------------------------------ */
-
-  document.addEventListener("keydown", (event) => {
-    if (!modal.classList.contains("is-open")) return;
-
-    if (event.key === "Escape") {
-      if (!viewer.hidden) {
-        closePDFViewer();
-      } else {
-        closeModal();
-      }
-    }
-
-    if (!viewer.hidden && event.key === "ArrowRight") {
-      goToPage(currentPageNumber - 1);
-    }
-
-    if (!viewer.hidden && event.key === "ArrowLeft") {
-      goToPage(currentPageNumber + 1);
-    }
-  });
-
-  /* ------------------------------------------------------------
-     Responsive re-render
-     ------------------------------------------------------------ */
-
-  let resizeTimer;
-
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimer);
-
-    resizeTimer = setTimeout(() => {
-      if (modal.classList.contains("is-open") && !viewer.hidden && currentPDF) {
-        renderPage();
-      }
-    }, 150);
-  });
-
-  /* ------------------------------------------------------------
-     HTML escape
-     ------------------------------------------------------------ */
-
-  function escapeHTML(value) {
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+  setupPDFLazyLoading();
 })();
+
 /* ============================================================
    RAKAEZ CMS - MongoDB dynamic projects
    ============================================================ */
