@@ -210,6 +210,7 @@ const hasPhotos = (key) =>
 
 /* --- عرض صورة بالمؤشر الحالي --- */
 function show(i) {
+  if (!lb || !lbFrame) return;
   if (!album.length) return;
   cursor = (i + album.length) % album.length;
   lbFrame.innerHTML = "";
@@ -230,6 +231,9 @@ function show(i) {
 
 /* --- فتح العارض: إما صور المفتاح، أو الرسم التوضيحي إن لم توجد صور --- */
 function openLB(key, el) {
+  /* العارض القديم غير موجود في الصفحة الحالية */
+  if (!lb) return;
+
   const g = GALLERIES[key] || {};
   document.getElementById("lbTitle").textContent =
     g.title || el.dataset.title || "";
@@ -272,43 +276,51 @@ function openLB(key, el) {
 }
 
 function closeLB() {
+  if (!lb) return;
   lb.classList.remove("is-open");
   document.body.style.overflow = "";
   if (lastFocus) lastFocus.focus();
 }
 
-lbPrev.addEventListener("click", () => show(cursor - 1));
-lbNext.addEventListener("click", () => show(cursor + 1));
-document.getElementById("lbClose").addEventListener("click", closeLB);
-lb.addEventListener("click", (e) => {
-  if (e.target === lb || e.target === lbFrame) closeLB();
-});
+if (lb) {
+  if (lbPrev) lbPrev.addEventListener("click", () => show(cursor - 1));
+  if (lbNext) lbNext.addEventListener("click", () => show(cursor + 1));
+
+  const lbCloseBtn = document.getElementById("lbClose");
+  if (lbCloseBtn) lbCloseBtn.addEventListener("click", closeLB);
+
+  lb.addEventListener("click", (e) => {
+    if (e.target === lb || e.target === lbFrame) closeLB();
+  });
+}
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closeLB();
     closeMenu();
   }
-  if (!lb.classList.contains("is-open") || album.length < 2) return;
+  if (!lb || !lb.classList.contains("is-open") || album.length < 2) return;
   if (e.key === "ArrowLeft") show(cursor + 1); // يسار = التالي في RTL
   if (e.key === "ArrowRight") show(cursor - 1);
 });
 
 /* السحب بالإصبع على الجوال */
 let touchX = null;
-lb.addEventListener(
-  "touchstart",
-  (e) => {
-    touchX = e.changedTouches[0].clientX;
-  },
-  { passive: true },
-);
-lb.addEventListener("touchend", (e) => {
-  if (touchX === null || album.length < 2) return;
-  const d = e.changedTouches[0].clientX - touchX;
-  if (Math.abs(d) > 50) show(cursor + (d < 0 ? 1 : -1));
-  touchX = null;
-});
+if (lb) {
+  lb.addEventListener(
+    "touchstart",
+    (e) => {
+      touchX = e.changedTouches[0].clientX;
+    },
+    { passive: true },
+  );
+  lb.addEventListener("touchend", (e) => {
+    if (touchX === null || album.length < 2) return;
+    const d = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(d) > 50) show(cursor + (d < 0 ? 1 : -1));
+    touchX = null;
+  });
+}
 
 /* --- تركيب الأغلفة وربط النقر بكل عنصر يحمل data-gallery --- */
 function mountGalleries(scope) {
