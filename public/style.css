@@ -2586,3 +2586,127 @@ button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit
 .final-projects-section * {
     color: #787878 !important;
 }
+/* =========================================================
+   PROJECT SPECIFICATIONS
+   ========================================================= */
+
+.specifications {
+    margin-top: 55px;
+    direction: rtl;
+}
+
+.specifications-header {
+    text-align: right;
+    margin-bottom: 30px;
+    max-width: 760px;
+}
+
+.specifications-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #a8844f;
+}
+
+.specifications-label::before {
+    content: "";
+    width: 28px;
+    height: 1px;
+    background: currentColor;
+}
+
+.specifications-header h3 {
+    margin: 0 0 12px;
+    font-size: clamp(26px, 3vw, 38px);
+    line-height: 1.25;
+    color: #202020;
+}
+
+.specifications-header p {
+    margin: 0;
+    color: #777;
+    font-size: 15px;
+    line-height: 1.9;
+}
+
+.specifications-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.spec-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 22px 20px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 14px;
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+.spec-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(168, 132, 79, 0.35);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
+}
+
+.spec-number {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #f5f1ea;
+    color: #a8844f;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.spec-card h4 {
+    margin: 2px 0 7px;
+    font-size: 17px;
+    font-weight: 700;
+    color: #242424;
+}
+
+.spec-card p {
+    margin: 0;
+    color: #707070;
+    font-size: 14px;
+    line-height: 1.85;
+}
+
+@media (max-width: 768px) {
+    .specifications {
+        margin-top: 40px;
+    }
+
+    .specifications-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .spec-card {
+        padding: 18px;
+    }
+
+    .spec-card h4 {
+        font-size: 16px;
+    }
+
+    .spec-card p {
+        font-size: 13px;
+    }
+}
