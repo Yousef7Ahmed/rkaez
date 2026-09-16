@@ -545,103 +545,172 @@ const mk = (tag, attrs) => {
 
 function drawPlan(key) {
   const p = PLANS[key];
-  svg.innerHTML = "";
-  svg.classList.remove("is-drawn");
 
-  p.rooms.forEach((r, i) => {
-    const rect = mk("rect", {
-      x: r.x,
-      y: r.y,
-      width: r.w,
-      height: r.h,
-      rx: 2,
-      class: "room",
+  // لو الـ plan غير موجود، ما توقفش باقي السكربت
+  if (!p) {
+    console.warn("Plan not found:", key);
+    return;
+  }
+
+  // =========================
+  // SVG
+  // =========================
+  if (svg) {
+    svg.innerHTML = "";
+    svg.classList.remove("is-drawn");
+
+    (p.rooms || []).forEach((r, i) => {
+      const rect = mk("rect", {
+        x: r.x,
+        y: r.y,
+        width: r.w,
+        height: r.h,
+        rx: 2,
+        class: "room",
+      });
+
+      rect.style.animationDelay = i * 55 + "ms";
+      svg.appendChild(rect);
+
+      const l = mk("text", {
+        x: r.x + r.w / 2,
+        y: r.y + r.h / 2 - 3,
+        class: "rlabel",
+        "text-anchor": "middle",
+      });
+
+      l.textContent = r.n;
+      l.style.animationDelay = i * 55 + 110 + "ms";
+      svg.appendChild(l);
+
+      const a = mk("text", {
+        x: r.x + r.w / 2,
+        y: r.y + r.h / 2 + 17,
+        class: "rarea",
+        "text-anchor": "middle",
+      });
+
+      a.textContent = r.a + " m²";
+      a.style.animationDelay = i * 55 + 150 + "ms";
+      svg.appendChild(a);
     });
-    rect.style.animationDelay = i * 55 + "ms";
-    svg.appendChild(rect);
 
-    const l = mk("text", {
-      x: r.x + r.w / 2,
-      y: r.y + r.h / 2 - 3,
-      class: "rlabel",
-      "text-anchor": "middle",
+    (p.glass || []).forEach((g, i) => {
+      const line = mk("line", {
+        x1: g.x1,
+        y1: g.y1,
+        x2: g.x2,
+        y2: g.y2,
+        class: "glassmark",
+      });
+
+      line.style.animationDelay = 300 + i * 70 + "ms";
+      svg.appendChild(line);
     });
-    l.textContent = r.n;
-    l.style.animationDelay = i * 55 + 110 + "ms";
-    svg.appendChild(l);
 
-    const a = mk("text", {
-      x: r.x + r.w / 2,
-      y: r.y + r.h / 2 + 17,
-      class: "rarea",
-      "text-anchor": "middle",
+    (p.dims || []).forEach((d) => {
+      svg.appendChild(
+        mk("line", {
+          x1: d.x1,
+          y1: d.y1,
+          x2: d.x2,
+          y2: d.y2,
+          class: "dimline",
+        }),
+      );
+
+      svg.appendChild(
+        mk("line", {
+          x1: d.x1,
+          y1: d.y1 - 5,
+          x2: d.x1,
+          y2: d.y1 + 5,
+          class: "dimline",
+        }),
+      );
+
+      svg.appendChild(
+        mk("line", {
+          x1: d.x2,
+          y1: d.y2 - 5,
+          x2: d.x2,
+          y2: d.y2 + 5,
+          class: "dimline",
+        }),
+      );
+
+      const t = mk("text", {
+        x: (d.x1 + d.x2) / 2,
+        y: (d.y1 + d.y2) / 2 - 8,
+        class: "dimtext",
+        "text-anchor": "middle",
+      });
+
+      t.textContent = d.t;
+      svg.appendChild(t);
     });
-    a.textContent = r.a + " m²";
-    a.style.animationDelay = i * 55 + 150 + "ms";
-    svg.appendChild(a);
-  });
 
-  (p.glass || []).forEach((g, i) => {
-    const line = mk("line", {
-      x1: g.x1,
-      y1: g.y1,
-      x2: g.x2,
-      y2: g.y2,
-      class: "glassmark",
+    requestAnimationFrame(() => {
+      if (svg) svg.classList.add("is-drawn");
     });
-    line.style.animationDelay = 300 + i * 70 + "ms";
-    svg.appendChild(line);
-  });
+  }
 
-  (p.dims || []).forEach((d) => {
-    svg.appendChild(
-      mk("line", { x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2, class: "dimline" }),
-    );
-    svg.appendChild(
-      mk("line", {
-        x1: d.x1,
-        y1: d.y1 - 5,
-        x2: d.x1,
-        y2: d.y1 + 5,
-        class: "dimline",
-      }),
-    );
-    svg.appendChild(
-      mk("line", {
-        x1: d.x2,
-        y1: d.y2 - 5,
-        x2: d.x2,
-        y2: d.y2 + 5,
-        class: "dimline",
-      }),
-    );
-    const t = mk("text", {
-      x: (d.x1 + d.x2) / 2,
-      y: (d.y1 + d.y2) / 2 - 8,
-      class: "dimtext",
-      "text-anchor": "middle",
-    });
-    t.textContent = d.t;
-    svg.appendChild(t);
-  });
+  // =========================
+  // معلومات الـ Plan
+  // =========================
 
-  requestAnimationFrame(() => svg.classList.add("is-drawn"));
+  const planTitle = document.getElementById("planTitle");
+  const planDesc = document.getElementById("planDesc");
+  const planTotal = document.getElementById("planTotal");
+  const planTotalLabel = document.getElementById("planTotalLabel");
+  const planRows = document.getElementById("planRows");
 
-  document.getElementById("planTitle").textContent = p.title;
-  document.getElementById("planDesc").textContent = p.desc;
-  document.getElementById("planTotal").textContent = p.total;
-  document.getElementById("planTotalLabel").textContent = p.label;
+  if (planTitle) {
+    planTitle.textContent = p.title || "";
+  }
 
-  const rows = p.list
-    .map(
-      ([n, a]) =>
-        `<div class="plan__row"><span>${n}</span><span class="num">${a} م²</span></div>`,
-    )
-    .join("");
-  const gn = p.glassNote
-    ? `<div class="plan__row" style="color:var(--edge)"><span>◧ ${p.glassNote[0]}</span><span class="num">${p.glassNote[1]}</span></div>`
-    : "";
-  document.getElementById("planRows").innerHTML = rows + gn;
+  if (planDesc) {
+    planDesc.textContent = p.desc || "";
+  }
+
+  if (planTotal) {
+    planTotal.textContent = p.total || "";
+  }
+
+  if (planTotalLabel) {
+    planTotalLabel.textContent = p.label || "";
+  }
+
+  // =========================
+  // Rows
+  // =========================
+
+  if (planRows) {
+    const rows = (p.list || [])
+      .map(
+        ([n, a]) =>
+          `<div class="plan__row">
+            <span>${n}</span>
+            <span class="num">${a} م²</span>
+          </div>`,
+      )
+      .join("");
+
+    const gn = p.glassNote
+      ? `<div class="plan__row" style="color:var(--edge)">
+          <span>◧ ${p.glassNote[0]}</span>
+          <span class="num">${p.glassNote[1]}</span>
+        </div>`
+      : "";
+
+    planRows.innerHTML = rows + gn;
+  }
+
+  // =========================
+  // صور الـ Plan
+  // =========================
+
+  // renderShots نفسها أصبحت آمنة بعد التعديل السابق
   renderShots(key);
 }
 
