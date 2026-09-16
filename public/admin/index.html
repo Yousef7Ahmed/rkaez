@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -529,6 +528,211 @@ textarea{
   border-color:#566a72;
 }
 
+/* ================= EDIT MODAL ================= */
+
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:22px;
+  background:rgba(4,8,10,.82);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .2s ease,visibility .2s ease;
+}
+
+.modal.is-open{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+
+.modal-dialog{
+  width:min(860px,100%);
+  max-height:92vh;
+  display:flex;
+  flex-direction:column;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:18px 22px;
+  border-bottom:1px solid var(--border);
+}
+
+.modal-head h2{
+  margin:0;
+  font-size:17px;
+}
+
+.modal-head span{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.modal-close{
+  width:34px;
+  height:34px;
+  border-radius:9px;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--text);
+  font-size:17px;
+  line-height:1;
+}
+
+.modal-close:hover{
+  border-color:#566a72;
+}
+
+.modal-body{
+  padding:22px;
+  overflow:auto;
+}
+
+.modal-foot{
+  display:flex;
+  justify-content:flex-start;
+  gap:10px;
+  padding:16px 22px;
+  border-top:1px solid var(--border);
+}
+
+.ghost-btn{
+  border:1px solid var(--border);
+  background:transparent;
+  color:#cbd5d8;
+  border-radius:11px;
+  padding:12px 20px;
+  font-weight:700;
+  font-size:13px;
+}
+
+.ghost-btn:hover{
+  border-color:#566a72;
+}
+
+.primary-btn[disabled],
+.ghost-btn[disabled]{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+/* --------- إدارة صور المشروع --------- */
+
+.img-manager{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+  gap:12px;
+  margin-top:10px;
+}
+
+.img-cell{
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  background:#0f181c;
+}
+
+.img-cell.is-cover{
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px var(--accent) inset;
+}
+
+.img-cell img{
+  display:block;
+  width:100%;
+  height:96px;
+  object-fit:cover;
+}
+
+.img-cell-bar{
+  display:flex;
+  gap:4px;
+  padding:6px;
+  background:#101a1e;
+}
+
+.img-cell-bar button{
+  flex:1;
+  border:1px solid var(--border);
+  background:transparent;
+  color:#cbd5d8;
+  border-radius:7px;
+  padding:5px 0;
+  font-size:11px;
+  font-weight:700;
+}
+
+.img-cell-bar button:hover:not([disabled]){
+  border-color:#566a72;
+}
+
+.img-cell-bar button[disabled]{
+  opacity:.35;
+  cursor:not-allowed;
+}
+
+.img-cell-bar .del{
+  border-color:#4a2929;
+  color:#e98989;
+}
+
+.cover-tag{
+  position:absolute;
+  top:7px;
+  inset-inline-start:7px;
+  padding:3px 8px;
+  border-radius:6px;
+  background:rgba(216,176,106,.9);
+  color:#1a1206;
+  font-size:10px;
+  font-weight:900;
+}
+
+.current-file{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-top:7px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.edit-btn{
+  border:1px solid var(--border);
+  background:rgba(216,176,106,.08);
+  color:var(--accent2);
+  border-radius:9px;
+  padding:8px 13px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.edit-btn:hover{
+  border-color:var(--accent);
+}
+
+.item-actions{
+  display:flex;
+  gap:7px;
+}
+
 /* ================= MOBILE ================= */
 
 .mobile-header{
@@ -953,6 +1157,212 @@ textarea{
 </div>
 
 
+<!-- ============================================================
+     نافذة تعديل المشروع
+     ============================================================ -->
+
+<div class="modal" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+
+  <div class="modal-dialog">
+
+    <div class="modal-head">
+      <div>
+        <h2 id="projectModalTitle">تعديل المشروع</h2>
+        <span id="projectModalName"></span>
+      </div>
+
+      <button class="modal-close" type="button" data-close-project aria-label="إغلاق">&times;</button>
+    </div>
+
+
+    <div class="modal-body">
+
+      <form id="projectEditForm">
+
+        <div class="form-grid">
+
+          <div class="field">
+            <label>القسم</label>
+            <select name="section">
+              <option value="rakah_a">مشاريع الراكه A</option>
+              <option value="rakah_bz">مشاريع الراكه B و Z</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>الترتيب</label>
+            <input name="order" type="number">
+          </div>
+
+          <div class="field">
+            <label>اسم المشروع</label>
+            <input name="title" required>
+          </div>
+
+          <div class="field">
+            <label>الوصف المختصر</label>
+            <input name="subtitle">
+          </div>
+
+          <div class="field">
+            <label>الحالة</label>
+            <input name="status">
+          </div>
+
+          <div class="field">
+            <label>السنة</label>
+            <input name="year" type="number">
+          </div>
+
+          <div class="field">
+            <label>مساحة الأرض</label>
+            <input name="landArea">
+          </div>
+
+          <div class="field">
+            <label>مساحة البناء</label>
+            <input name="builtArea">
+          </div>
+
+          <div class="field">
+            <label>عدد الغرف</label>
+            <input name="rooms">
+          </div>
+
+          <div class="field form-full">
+            <label>وصف المشروع</label>
+            <textarea name="description"></textarea>
+          </div>
+
+          <div class="field form-full">
+            <label>إضافة صور جديدة</label>
+            <input
+              name="images"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              multiple
+            >
+            <small class="muted">الصور الجديدة تُضاف لآخر القائمة بعد الحفظ.</small>
+          </div>
+
+        </div>
+
+      </form>
+
+
+      <div class="section-divider"></div>
+
+      <div class="field form-full">
+        <label>الصور الحالية</label>
+        <small class="muted">
+          اضغط «غلاف» لجعل الصورة صورة الكارت، واستخدم الأسهم للترتيب.
+          الحذف والترتيب والغلاف يُحفظون فوراً.
+        </small>
+
+        <div class="img-manager" id="projectImages"></div>
+      </div>
+
+      <div id="projectEditMsg"></div>
+
+    </div>
+
+
+    <div class="modal-foot">
+      <button class="primary-btn" type="submit" form="projectEditForm" id="projectSaveBtn">
+        حفظ التعديلات
+      </button>
+
+      <button class="ghost-btn" type="button" data-close-project>
+        إلغاء
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ============================================================
+     نافذة تعديل ملف PDF
+     ============================================================ -->
+
+<div class="modal" id="pdfModal" role="dialog" aria-modal="true" aria-labelledby="pdfModalTitle">
+
+  <div class="modal-dialog">
+
+    <div class="modal-head">
+      <div>
+        <h2 id="pdfModalTitle">تعديل ملف PDF</h2>
+        <span id="pdfModalName"></span>
+      </div>
+
+      <button class="modal-close" type="button" data-close-pdf aria-label="إغلاق">&times;</button>
+    </div>
+
+
+    <div class="modal-body">
+
+      <form id="pdfEditForm">
+
+        <div class="form-grid">
+
+          <div class="field">
+            <label>عنوان الملف</label>
+            <input name="title" required>
+          </div>
+
+          <div class="field">
+            <label>التصنيف</label>
+            <select name="category">
+              <option value="warranty">ضمانات</option>
+              <option value="certificates">شهادات</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>الترتيب</label>
+            <input name="order" type="number">
+          </div>
+
+          <div class="field form-full">
+            <label>استبدال ملف الـ PDF (اختياري)</label>
+            <input name="file" type="file" accept="application/pdf">
+
+            <div class="current-file">
+              الملف الحالي:
+              <a class="open-btn" id="pdfCurrentLink" href="#" target="_blank" rel="noopener">فتح</a>
+            </div>
+
+            <small class="muted">
+              اتركه فارغاً للاحتفاظ بالملف الحالي. الملف القديم يُحذف بعد نجاح رفع الجديد.
+            </small>
+          </div>
+
+        </div>
+
+      </form>
+
+      <div id="pdfEditMsg"></div>
+
+    </div>
+
+
+    <div class="modal-foot">
+      <button class="primary-btn" type="submit" form="pdfEditForm" id="pdfSaveBtn">
+        حفظ التعديلات
+      </button>
+
+      <button class="ghost-btn" type="button" data-close-pdf>
+        إلغاء
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+
 <script>
 
 const $ = s => document.querySelector(s);
@@ -1076,6 +1486,13 @@ function showTab(t){
 
 /* ================= LOAD DATA ================= */
 
+/* نحتفظ بآخر نسخة من البيانات عشان نملأ بيها نوافذ التعديل */
+const state = {
+  projects: [],
+  pdfs: []
+};
+
+
 async function loadAll(){
 
   try{
@@ -1085,6 +1502,8 @@ async function loadAll(){
       api('/api/pdfs')
     ]);
 
+    state.projects = ps;
+    state.pdfs = fs;
 
     $('#projectCount').textContent = ps.length;
     $('#pdfCount').textContent = fs.length;
@@ -1093,7 +1512,7 @@ async function loadAll(){
     $('#projectList').innerHTML =
       ps.map(p => {
 
-        const image = p.images?.[0]?.path;
+        const image = p.coverImage || p.images?.[0]?.path;
 
         return `
 
@@ -1146,13 +1565,28 @@ async function loadAll(){
 
                 <span class="badge">
                   ${esc(p.status || 'مشروع')}
+                  ${
+                    p.images?.length
+                    ? ` · ${p.images.length} صورة`
+                    : ''
+                  }
                 </span>
 
-                <button
-                  class="danger"
-                  onclick="delProject('${p._id}')">
-                  حذف المشروع
-                </button>
+                <div class="item-actions">
+
+                  <button
+                    class="edit-btn"
+                    onclick="openProjectEdit('${p._id}')">
+                    تعديل
+                  </button>
+
+                  <button
+                    class="danger"
+                    onclick="delProject('${p._id}')">
+                    حذف
+                  </button>
+
+                </div>
 
               </div>
 
@@ -1200,9 +1634,16 @@ async function loadAll(){
             <a
               class="open-btn"
               href="${esc(f.filePath)}"
-              target="_blank">
+              target="_blank"
+              rel="noopener">
               فتح
             </a>
+
+            <button
+              class="edit-btn"
+              onclick="openPdfEdit('${f._id}')">
+              تعديل
+            </button>
 
             <button
               class="danger"
@@ -1297,6 +1738,357 @@ $('#pdfForm').onsubmit = async e => {
 };
 
 
+/* ================= EDIT: MODAL HELPERS ================= */
+
+function openModal(el){
+  el.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+
+  const body = el.querySelector('.modal-body');
+  if(body) body.scrollTop = 0;
+}
+
+function closeModal(el){
+  el.classList.remove('is-open');
+  document.body.style.overflow = '';
+}
+
+function setMsg(el,text,kind){
+  el.className = text ? 'message ' + kind : '';
+  el.textContent = text || '';
+}
+
+/* إغلاق بالنقر على الخلفية أو زر الإغلاق */
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => {
+    if(e.target === m || e.target.closest('[data-close-project],[data-close-pdf]')){
+      closeModal(m);
+    }
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+
+  document
+    .querySelectorAll('.modal.is-open')
+    .forEach(m => closeModal(m));
+});
+
+
+/* ================= EDIT: PROJECT ================= */
+
+const projectModal = $('#projectModal');
+const projectEditForm = $('#projectEditForm');
+
+let editingProject = null;
+
+
+function openProjectEdit(id){
+
+  const p = state.projects.find(x => x._id === id);
+
+  if(!p){
+    alert('لم يتم العثور على المشروع. حدّث الصفحة.');
+    return;
+  }
+
+  editingProject = p;
+
+  setMsg($('#projectEditMsg'),'');
+
+  $('#projectModalName').textContent = p.title || '';
+
+  const f = projectEditForm;
+
+  f.section.value     = p.section || 'rakah_a';
+  f.order.value       = p.order ?? 0;
+  f.title.value       = p.title || '';
+  f.subtitle.value    = p.subtitle || '';
+  f.status.value      = p.status || '';
+  f.year.value        = p.year ?? '';
+  f.landArea.value    = p.landArea || '';
+  f.builtArea.value   = p.builtArea || '';
+  f.rooms.value       = p.rooms || '';
+  f.description.value = p.description || '';
+  f.images.value      = '';
+
+  renderProjectImages();
+
+  openModal(projectModal);
+}
+
+
+function renderProjectImages(){
+
+  const box = $('#projectImages');
+
+  const images = editingProject?.images || [];
+
+  if(!images.length){
+    box.innerHTML = '<p class="muted">لا توجد صور لهذا المشروع بعد.</p>';
+    return;
+  }
+
+  const cover = editingProject.coverImage || images[0]?.path;
+
+  box.innerHTML = images.map((img,i) => `
+
+    <div class="img-cell ${img.path === cover ? 'is-cover' : ''}">
+
+      ${
+        img.path === cover
+        ? '<span class="cover-tag">الغلاف</span>'
+        : ''
+      }
+
+      <img src="${esc(img.path)}" alt="صورة ${i+1}" loading="lazy">
+
+      <div class="img-cell-bar">
+
+        <button type="button"
+          title="تحريك لليمين"
+          ${i === 0 ? 'disabled' : ''}
+          onclick="moveProjectImage(${i},-1)">&#8594;</button>
+
+        <button type="button"
+          title="تحريك لليسار"
+          ${i === images.length - 1 ? 'disabled' : ''}
+          onclick="moveProjectImage(${i},1)">&#8592;</button>
+
+        <button type="button"
+          ${img.path === cover ? 'disabled' : ''}
+          onclick="setProjectCover(${i})">غلاف</button>
+
+        <button type="button" class="del"
+          onclick="deleteProjectImage(${i})">حذف</button>
+
+      </div>
+
+    </div>
+
+  `).join('');
+}
+
+
+/* تحديث نسخة المشروع في الذاكرة بعد أي رد من الخادم */
+function syncProject(updated){
+
+  editingProject = updated;
+
+  const i = state.projects.findIndex(x => x._id === updated._id);
+
+  if(i > -1) state.projects[i] = updated;
+
+  renderProjectImages();
+}
+
+
+async function setProjectCover(index){
+
+  const img = editingProject?.images?.[index];
+  if(!img) return;
+
+  const msg = $('#projectEditMsg');
+
+  try{
+    const fd = new FormData();
+    fd.append('coverImage', img.path);
+
+    const updated = await api('/api/admin/projects/' + editingProject._id,{
+      method:'PUT',
+      body:fd
+    });
+
+    syncProject(updated);
+
+    setMsg(msg,'تم تحديد صورة الغلاف','success');
+
+  }catch(e){
+    setMsg(msg,e.message,'error');
+  }
+}
+
+
+async function moveProjectImage(index,dir){
+
+  const images = editingProject?.images || [];
+
+  const target = index + dir;
+  if(target < 0 || target >= images.length) return;
+
+  const order = images.map(x => x.path);
+
+  [order[index],order[target]] = [order[target],order[index]];
+
+  const msg = $('#projectEditMsg');
+
+  try{
+    const updated = await api('/api/admin/projects/' + editingProject._id + '/images/order',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ order })
+    });
+
+    syncProject(updated);
+
+    setMsg(msg,'تم تغيير ترتيب الصور','success');
+
+  }catch(e){
+    setMsg(msg,e.message,'error');
+  }
+}
+
+
+async function deleteProjectImage(index){
+
+  if(!confirm('حذف هذه الصورة نهائياً؟')) return;
+
+  const msg = $('#projectEditMsg');
+
+  try{
+    const updated = await api(
+      '/api/admin/projects/' + editingProject._id + '/images/' + index,
+      { method:'DELETE' }
+    );
+
+    syncProject(updated);
+
+    setMsg(msg,'تم حذف الصورة','success');
+
+  }catch(e){
+    setMsg(msg,e.message,'error');
+  }
+}
+
+
+projectEditForm.onsubmit = async e => {
+
+  e.preventDefault();
+
+  if(!editingProject) return;
+
+  const msg = $('#projectEditMsg');
+  const btn = $('#projectSaveBtn');
+
+  setMsg(msg,'');
+
+  btn.disabled = true;
+  btn.textContent = 'جاري الحفظ...';
+
+  try{
+
+    const updated = await api('/api/admin/projects/' + editingProject._id,{
+      method:'PUT',
+      body:new FormData(e.target)
+    });
+
+    syncProject(updated);
+
+    e.target.images.value = '';
+
+    setMsg(msg,'تم حفظ التعديلات بنجاح','success');
+
+    await loadAll();
+
+    closeModal(projectModal);
+
+  }catch(x){
+
+    setMsg(msg,x.message,'error');
+
+  }finally{
+
+    btn.disabled = false;
+    btn.textContent = 'حفظ التعديلات';
+
+  }
+
+};
+
+
+/* ================= EDIT: PDF ================= */
+
+const pdfModal = $('#pdfModal');
+const pdfEditForm = $('#pdfEditForm');
+
+let editingPdf = null;
+
+
+function openPdfEdit(id){
+
+  const f = state.pdfs.find(x => x._id === id);
+
+  if(!f){
+    alert('لم يتم العثور على الملف. حدّث الصفحة.');
+    return;
+  }
+
+  editingPdf = f;
+
+  setMsg($('#pdfEditMsg'),'');
+
+  $('#pdfModalName').textContent = f.title || '';
+
+  const form = pdfEditForm;
+
+  form.title.value    = f.title || '';
+  form.category.value = f.category || 'other';
+  form.order.value    = f.order ?? 0;
+  form.file.value     = '';
+
+  $('#pdfCurrentLink').href = f.filePath || '#';
+
+  openModal(pdfModal);
+}
+
+
+pdfEditForm.onsubmit = async e => {
+
+  e.preventDefault();
+
+  if(!editingPdf) return;
+
+  const msg = $('#pdfEditMsg');
+  const btn = $('#pdfSaveBtn');
+
+  setMsg(msg,'');
+
+  btn.disabled = true;
+  btn.textContent = 'جاري الحفظ...';
+
+  try{
+
+    const fd = new FormData(e.target);
+
+    /* لا نرسل حقل ملف فارغ */
+    if(!e.target.file.files.length) fd.delete('file');
+
+    await api('/api/admin/pdfs/' + editingPdf._id,{
+      method:'PUT',
+      body:fd
+    });
+
+    setMsg(msg,'تم حفظ التعديلات بنجاح','success');
+
+    await loadAll();
+
+    closeModal(pdfModal);
+
+  }catch(x){
+
+    setMsg(msg,x.message,'error');
+
+  }finally{
+
+    btn.disabled = false;
+    btn.textContent = 'حفظ التعديلات';
+
+  }
+
+};
+
+
 /* ================= DELETE ================= */
 
 async function delProject(id){
@@ -1367,4 +2159,3 @@ check();
 
 </body>
 </html>
-

@@ -1277,6 +1277,20 @@ function getProjectImages(project) {
     images.push(project.coverImage);
   }
 
+  /*
+   * صورة الغلاف المختارة من لوحة التحكم
+   * تبقى دائمًا أول صورة
+   */
+
+  if (project.coverImage) {
+    const coverIndex = images.indexOf(project.coverImage);
+
+    if (coverIndex > 0) {
+      images.splice(coverIndex, 1);
+      images.unshift(project.coverImage);
+    }
+  }
+
   return images;
 }
 
