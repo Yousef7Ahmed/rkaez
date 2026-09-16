@@ -365,34 +365,54 @@ mountGalleries();
 /* --- شريط صور الدور المعروض في قسم المساحات --- */
 function renderShots(planKey) {
   const box = document.getElementById("planShots");
+
+  // العنصر غير موجود في الصفحة الحالية
+  if (!box) return;
+
   const key = "plan-" + planKey;
+
   box.innerHTML = "";
+
   if (!hasPhotos(key)) return;
+
   const imgs = GALLERIES[key].images;
+
   imgs.slice(0, 3).forEach((src, n) => {
     const b = document.createElement("button");
+
     b.type = "button";
     b.setAttribute("aria-label", "عرض صور هذا الدور");
+
     const t = new Image();
+
     t.src = src;
     t.alt = "";
+
     t.onerror = () => b.remove();
+
     b.appendChild(t);
+
     b.addEventListener("click", () => {
       openLB(key, box);
       show(n);
     });
+
     box.appendChild(b);
   });
+
   if (imgs.length > 3) {
     const more = document.createElement("button");
+
     more.type = "button";
     more.className = "shots__more";
+
     more.textContent = "+" + (imgs.length - 3);
+
     more.addEventListener("click", () => {
       openLB(key, box);
       show(3);
     });
+
     box.appendChild(more);
   }
 }
